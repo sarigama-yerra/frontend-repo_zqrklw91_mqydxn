@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import Spline from '@splinetool/react-spline'
+import AvatarKid from './components/AvatarKid'
+import CityBuilding from './components/CityBuilding'
 
 // Sound manager: celebration, wrong, click + volume/mute
 function useSoundFX() {
@@ -26,10 +28,11 @@ function useSoundFX() {
     }
   }, [volume, muted])
 
-  const playCelebrate = () => {
+  const playCelebrate = (level=1) => {
     const ctx = ensure(); if (!ctx) return
     const now = ctx.currentTime
-    const chord = [523.25, 659.25, 783.99] // C5 E5 G5
+    const base = level === 1 ? 523.25 : level === 2 ? 659.25 : 783.99 // base note shifts with level
+    const chord = [base, base*1.25, base*1.5]
     chord.forEach((freq, i) => {
       const o = ctx.createOscillator()
       const g = ctx.createGain()
@@ -165,7 +168,7 @@ function App() {
     if (n === target) {
       clearInterval(timerRef.current)
       setFeedback('right')
-      playCelebrate()
+      playCelebrate(level)
       const hues = [16, 28, 40, 190, 220, 260, 300]
       const hue = hues[Math.floor(Math.random() * hues.length)]
       setBuilt(prev => [
@@ -208,8 +211,9 @@ function App() {
         <Spline scene="https://prod.spline.design/95Gu7tsx2K-0F3oi/scene.splinecode" style={{ width: '100%', height: '100%' }} />
       </div>
 
-      {/* Soft gradient overlay */}
+      {/* Layered gradient and depth */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/70 via-white/40 to-white/60" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,180,0,0.15),transparent_50%)]" />
 
       {/* Content */}
       <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-6">
@@ -227,7 +231,7 @@ function App() {
               <button
                 key={l.id}
                 onClick={() => { setLevel(l.id); setBuilt([]); setRound(0); setFeedback(null); }}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${level===l.id? 'bg-orange-600 text-white' : 'bg-white/80 text-gray-800 hover:bg-white'} shadow`}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-transform hover:-translate-y-0.5 ${level===l.id? 'bg-orange-600 text-white shadow-lg' : 'bg-white/80 text-gray-800 hover:bg-white shadow'}`}
               >
                 {l.title}
               </button>
@@ -253,7 +257,9 @@ function App() {
             </div>
             <div className="order-1 lg:order-2">
               <div className="rounded-2xl bg-white/60 p-4 text-center shadow-xl backdrop-blur">
-                <div className="text-7xl">👦🏻👷🏻‍♀️</div>
+                <div className="mx-auto w-fit rounded-2xl bg-white/70 p-3 shadow">
+                  <AvatarKid mood="idle" />
+                </div>
                 <p className="mt-2 text-gray-700">کارگرهای کوچک آماده‌اند تا ساختمان‌های تازه بسازند!</p>
               </div>
             </div>
@@ -283,21 +289,7 @@ function App() {
                     </div>
                   )}
                   {built.map(b => (
-                    <div key={b.id} className="group relative flex h-48 items-end overflow-hidden rounded-xl bg-gradient-to-t from-black/10 to-transparent">
-                      <div
-                        className="mx-auto w-11/12 rounded-t-md shadow-lg transition-transform duration-500 group-hover:-translate-y-1"
-                        style={{ background: b.color, height: b.height }}
-                      >
-                        <div className="grid grid-cols-3 gap-1 p-2">
-                          {Array.from({ length: b.windows }).map((_, i) => (
-                            <span key={i} className="h-3 w-full rounded-sm bg-white/70 shadow-inner" />
-                          ))}
-                        </div>
-                      </div>
-                      <span className="absolute left-2 top-2 select-none rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-gray-700 shadow">
-                        +۱ ساختمان
-                      </span>
-                    </div>
+                    <CityBuilding key={b.id} color={b.color} height={b.height} windows={b.windows} />
                   ))}
                 </div>
               </div>
@@ -323,9 +315,9 @@ function App() {
               <div className={`rounded-2xl bg-white/90 p-4 shadow-xl backdrop-blur`}>
                 <div className="flex items-center justify-between">
                   {/* Child avatar */}
-                  <div className={`select-none text-4xl transition-transform ${feedback==='right' ? 'animate-bounce' : feedback==='wrong' ? 'animate-[shake_0.5s]' : ''}`}>
-                    <span role="img" aria-label="child">👧🏻</span>
-                    <span className="ml-1" role="img" aria-label="worker">👷🏻‍♂️</span>
+                  <div className="flex items-center gap-2">
+                    <AvatarKid mood={feedback==='right' ? 'happy' : feedback==='wrong' ? 'sad' : 'idle'} />
+                    <span className="text-sm text-gray-600">کارگر کوچولو همراه توست!</span>
                   </div>
 
                   {/* Timed mode toggle */}
@@ -376,7 +368,7 @@ function App() {
                       <button
                         key={n}
                         onClick={() => handleAnswer(n)}
-                        className={`h-12 rounded-xl font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 ${isCorrect ? 'bg-green-500 text-white' : 'bg-white text-gray-800 hover:bg-orange-50'} shadow`}
+                        className={`h-12 rounded-xl font-bold transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 ${isCorrect ? 'bg-green-500 text-white' : 'bg-white text-gray-800 hover:-translate-y-0.5 hover:bg-orange-50 shadow'}`}
                       >
                         {n}
                       </button>
